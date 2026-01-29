@@ -1,0 +1,184 @@
+<Window
+xmlns="https://github.com/avaloniaui"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:vm="using:Dc07ProUAC"
+xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+x:DataType="vm:MainWindowViewModel"
+x:Class="Dc07ProUAC.MainWindow"
+Width="900" Height="600"
+CanResize="False"
+Title="iBasso DC07Pro UAC Control">
+
+	<Window.DataContext>
+		<vm:MainWindowViewModel/>
+	</Window.DataContext>
+
+	<Window.Styles>
+		<Style Selector="Border.card">
+			<Setter Property="CornerRadius" Value="14"/>
+			<Setter Property="Padding" Value="16"/>
+			<Setter Property="Background" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
+		</Style>
+
+		<Style Selector="Border.pill">
+			<Setter Property="CornerRadius" Value="999"/>
+			<Setter Property="Padding" Value="10,4"/>
+			<Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}"/>
+		</Style>
+
+		<Style Selector="TextBlock.h2">
+			<Setter Property="FontSize" Value="16"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+		</Style>
+
+		<Style Selector="TextBlock.caption">
+			<Setter Property="Opacity" Value="0.75"/>
+			<Setter Property="FontSize" Value="12"/>
+		</Style>
+
+		<Style Selector="Button.step">
+			<Setter Property="MinWidth" Value="56"/>
+		</Style>
+	</Window.Styles>
+
+	<Grid RowDefinitions="Auto,*">
+		<!-- HEADER -->
+		<Border Padding="18,14"
+				BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+				BorderThickness="0,0,0,1">
+			<Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+				<StackPanel Orientation="Horizontal" Spacing="12">
+					<fluent:FluentIcon Icon="Headphones" FontSize="22"/>
+					<StackPanel Spacing="2">
+						<TextBlock Text="iBasso DC07Pro" FontSize="18" FontWeight="SemiBold"/>
+						<TextBlock Text="{Binding SubTitle}" Opacity="0.75" FontSize="12"/>
+					</StackPanel>
+				</StackPanel>
+
+				<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+					<Border Classes="pill" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+						<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+							<fluent:FluentIcon Icon="{Binding ConnectionIcon}" FontSize="16"/>
+							<TextBlock Text="{Binding ConnectionText}" FontSize="12" Opacity="0.85"/>
+						</StackPanel>
+					</Border>
+
+					<ToggleSwitch IsChecked="{Binding IsAutoApply}" Content="Auto Apply" VerticalAlignment="Center"/>
+					<ToggleSwitch IsChecked="{Binding IsDarkMode, Mode=TwoWay}" Content="Dark Mode" VerticalAlignment="Center"/>
+				</StackPanel>
+			</Grid>
+		</Border>
+
+		<ScrollViewer Grid.Row="1">
+			<Grid Margin="18"
+				  ColumnDefinitions="*,*"
+				  ColumnSpacing="14"
+				  RowDefinitions="Auto,Auto,Auto"
+				  RowSpacing="14">
+
+				<Border Classes="card">
+					<Grid RowDefinitions="Auto,Auto" RowSpacing="14">
+						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Center">
+							<fluent:FluentIcon Icon="Speaker2" FontSize="18"/>
+							<TextBlock Grid.Column="1" Classes="h2" Text="Volume"/>
+							<Border Grid.Column="2" Classes="pill">
+								<TextBlock Text="{Binding VolumeDisplay}" FontWeight="SemiBold"/>
+							</Border>
+						</Grid>
+
+						<Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Center">
+							<Button Classes="step" Content="−1" Command="{Binding VolumeDownCommand}"/>
+							<Slider Grid.Column="1"
+									Minimum="0" Maximum="100"
+									Value="{Binding Volume, Mode=TwoWay}"
+									LargeChange="5" SmallChange="1"/>
+							<Button Grid.Column="2" Classes="step" Content="+1" Command="{Binding VolumeUpCommand}"/>
+						</Grid>
+					</Grid>
+				</Border>
+
+				<Border Grid.Column="1" Classes="card">
+					<Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
+						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Center">
+							<fluent:FluentIcon Icon="Settings" FontSize="18"/>
+							<TextBlock Grid.Column="1" Classes="h2" Text="Balance"/>
+							<Border Grid.Column="2" Classes="pill">
+								<TextBlock Text="{Binding BalanceDisplay}" FontWeight="SemiBold"/>
+							</Border>
+						</Grid>
+
+						<Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Center">
+							<TextBlock Text="L" Opacity="0.8" VerticalAlignment="Center"/>
+							<Slider Grid.Column="1"
+									Minimum="-10" Maximum="10"
+									Value="{Binding Balance, Mode=TwoWay}"
+									LargeChange="2" SmallChange="1"/>
+							<TextBlock Grid.Column="2" Text="R" Opacity="0.8" VerticalAlignment="Center"/>
+						</Grid>
+
+						<Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalAlignment="Center">
+							<TextBlock Classes="caption" Text="Tip: 0 is center." VerticalAlignment="Center"/>
+							<Button Grid.Column="1" Content="Center" Command="{Binding BalanceCenterCommand}" MinWidth="110"/>
+						</Grid>
+					</Grid>
+				</Border>
+
+				<Border Grid.Row="1" Classes="card">
+					<Grid RowDefinitions="Auto,Auto" RowSpacing="12">
+						<Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalAlignment="Center">
+							<fluent:FluentIcon Icon="Settings" FontSize="18"/>
+							<TextBlock Grid.Column="1" Classes="h2" Text="Analog"/>
+						</Grid>
+
+						<Grid Grid.Row="1" RowDefinitions="Auto,Auto" RowSpacing="8">
+							<TextBlock Classes="caption" Text="Gain"/>
+							<WrapPanel Grid.Row="1" ItemHeight="32" ItemWidth="88" HorizontalAlignment="Left" VerticalAlignment="Center">
+								<RadioButton Content="Low"  GroupName="Gain" IsChecked="{Binding IsGainLow, Mode=TwoWay}"  Margin="0,0,10,0"/>
+								<RadioButton Content="Mid"  GroupName="Gain" IsChecked="{Binding IsGainMid, Mode=TwoWay}"  Margin="0,0,10,0"/>
+								<RadioButton Content="High" GroupName="Gain" IsChecked="{Binding IsGainHigh, Mode=TwoWay}"/>
+							</WrapPanel>
+						</Grid>
+					</Grid>
+				</Border>
+
+				<Border Grid.Row="1" Grid.Column="1" Classes="card">
+					<Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+						<Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalAlignment="Center">
+							<fluent:FluentIcon Icon="MusicNote2" FontSize="18"/>
+							<TextBlock Grid.Column="1" Classes="h2" Text="Digital"/>
+						</Grid>
+
+						<Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="12">
+							<ToggleSwitch Content="SPDIF" IsChecked="{Binding SpdifEnabled}"/>
+							<ToggleSwitch Grid.Column="1" Content="HP FILTER" IsChecked="{Binding HpFilterEnabled}"/>
+						</Grid>
+
+						<Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="8">
+							<TextBlock Classes="caption" Text="Filter"/>
+							<ComboBox Grid.Row="1" SelectedItem="{Binding SelectedFilter}" ItemsSource="{Binding Filters}">
+								<ComboBox.ItemTemplate>
+									<DataTemplate x:DataType="x:String">
+										<TextBlock Text="{Binding}"/>
+									</DataTemplate>
+								</ComboBox.ItemTemplate>
+							</ComboBox>
+						</Grid>
+					</Grid>
+				</Border>
+
+				<Border Grid.Row="2" Grid.ColumnSpan="2" Classes="card">
+					<Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+						<TextBlock Text="{Binding FooterStatus}" Opacity="0.85" FontSize="12"/>
+
+						<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+							<Button Content="Select Device" Command="{Binding SelectDeviceCommand}"/>
+							<Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+							<Button Content="Apply" Command="{Binding ApplyCommand}" Classes="accent" MinWidth="110"/>
+						</StackPanel>
+					</Grid>
+				</Border>
+
+			</Grid>
+		</ScrollViewer>
+	</Grid>
+</Window>

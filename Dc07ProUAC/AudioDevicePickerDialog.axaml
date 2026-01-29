@@ -1,0 +1,74 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Dc07ProUAC"
+        x:Class="Dc07ProUAC.AudioDevicePickerDialog"
+        x:DataType="local:AudioDevicePickerDialog+ViewModel"
+        Width="720" Height="620"
+        Title="Select HID Device"
+        WindowStartupLocation="CenterOwner">
+
+  <Grid Margin="16" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+
+    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+      <TextBlock FontSize="18" FontWeight="SemiBold"
+                 Text="Select a device" />
+
+      <Button Grid.Row="0" Grid.Column="1"
+              Content="Refresh"
+              Command="{Binding RefreshCommand}" />
+
+      <TextBox Grid.Row="1" Grid.ColumnSpan="2" Grid.Column="0"
+               Watermark="Ranking keyword (default: Dc07Pro). Examples: DC07 Pro, DC07, MOONDROP"
+               Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+    </Grid>
+
+    <Border Grid.Row="1" CornerRadius="10" BorderThickness="1" Padding="10">
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="6">
+        <ProgressBar Width="140" Height="8" IsIndeterminate="True" IsVisible="{Binding IsLoading}" />
+        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding StatusText}" Opacity="0.8" TextWrapping="Wrap"/>
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Grid.Column="0"
+                   Text="{Binding ErrorText}"
+                   Foreground="Tomato"
+                   IsVisible="{Binding HasError}"
+                   TextWrapping="Wrap"/>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="2" CornerRadius="12" BorderThickness="1" Padding="8">
+      <ListBox ItemsSource="{Binding Devices}"
+               SelectedItem="{Binding Selected}"
+               HorizontalAlignment="Stretch">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="local:AudioDevicePickerDialog+DeviceRow">
+            <Grid ColumnDefinitions="*,Auto,Auto" Margin="6" ColumnSpacing="12">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Subtitle}" Opacity="0.75" FontSize="12" TextTrimming="CharacterEllipsis"/>
+              </StackPanel>
+
+              <TextBlock Grid.Column="1"
+                         Text="{Binding VidPidText}"
+                         Opacity="0.8"
+                         VerticalAlignment="Center"/>
+
+              <Border Grid.Column="2" CornerRadius="999" BorderThickness="1" Padding="8,2"
+                      VerticalAlignment="Center">
+                <TextBlock Text="{Binding MatchText}" />
+              </Border>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel"
+              Command="{Binding CancelCommand}" />
+      <Button Content="Select"
+              IsDefault="True"
+              IsEnabled="{Binding CanAccept}"
+              Command="{Binding AcceptCommand}" />
+    </StackPanel>
+
+  </Grid>
+</Window>

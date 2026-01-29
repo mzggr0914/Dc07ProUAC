@@ -1,0 +1,27 @@
+namespace Dc07ProUAC;
+
+public static class Dc07ProPackets
+{
+    private static byte Not(byte b) => (byte)~b;
+
+    public static byte[] PingFpga58()
+        => [0x58, 0xF1, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00];
+
+    public static byte[] SetVolume(byte v)
+        => [0x01, 0x10, Not(0x10), v, v, 0x00, 0x00, 0x00];
+
+    public static byte[] QueryVolume66()
+        => [0x42, 0x11, Not(0x11), 0x00, 0x00, 0x00, 0x00, 0x00];
+
+    public static byte[] SetFilters(byte digitalFilterDevice, byte hpFilter)
+        => [0x11, 0x20, Not(0x20), 0x00, digitalFilterDevice, hpFilter, 0x00, 0x00];
+
+    public static byte[] QueryFilter89()
+        => [0x59, 0x21, Not(0x21), 0x00, 0x00, 0x00, 0x00, 0x00];
+
+    public static byte[] SetSpdifBalanceGain(byte spdifMode, byte balance, byte gainRaw0To2)
+        => [0x19, 0x30, Not(0x30), 0x00, spdifMode, balance, gainRaw0To2, 0x00];
+
+    public static byte[] QuerySpdif60()
+        => [0x60, 0x31, Not(0x31), 0x00, 0x00, 0x00, 0x00, 0x00];
+}
