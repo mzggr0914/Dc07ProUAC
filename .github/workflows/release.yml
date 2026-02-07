@@ -10,8 +10,8 @@ permissions:
   contents: write
 
 env:
-  APP_NAME: MyApp
-  PROJECT_PATH: src/MyApp.Desktop/MyApp.Desktop.csproj
+  APP_NAME: Dc07ProUAC
+  PROJECT_PATH: Dc07ProUAC/Dc07ProUAC.csproj
 
 jobs:
   build:
