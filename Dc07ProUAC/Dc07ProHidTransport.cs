@@ -1,5 +1,6 @@
 using HidSharp;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -126,15 +127,15 @@ public sealed class Dc07ProHidTransport : IDisposable
     public void Dispose()
     {
         try { _cts.Cancel(); }
-        catch
+        catch (Exception ex)
         {
-            // ignored
+            Debug.WriteLine(ex);
         }
 
         try { _readLoop.Wait(200); }
-        catch
+        catch (Exception ex)
         {
-            // ignored
+            Debug.WriteLine(ex);
         }
 
         _stream.Dispose();

@@ -252,16 +252,39 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
-        try { _applyCts.Cancel(); } catch { }
-        try { _applyCts.Dispose(); } catch { }
+        try
+        {
+            _applyCts.Cancel();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+        try { _applyCts.Dispose(); }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
 
-        try { _ioLock.Dispose(); } catch { }
+        try { _ioLock.Dispose(); }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
 
         if (_hasController)
-            try { _dc07.Dispose(); } catch { }
+            try { _dc07.Dispose(); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
 
         if (!_hasTransport) return;
-        try { _transport.Dispose(); } catch { }
+        try { _transport.Dispose(); }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
     }
 
     private bool CanUseDeviceCommands() => _hasSelectedDevice;
@@ -532,8 +555,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void ScheduleDelayedApply(int delayMs)
     {
-        try { _applyCts.Cancel(); } catch { }
-        try { _applyCts.Dispose(); } catch { }
+        try { _applyCts.Cancel(); }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+        try { _applyCts.Dispose(); }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
 
         _applyCts = new CancellationTokenSource();
         var token = _applyCts.Token;
@@ -546,8 +577,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 if (token.IsCancellationRequested) return;
                 await ApplyNowAsync(throttle: false);
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.WriteLine(ex);
             }
         }, token);
     }
