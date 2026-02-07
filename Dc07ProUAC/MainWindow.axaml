@@ -51,7 +51,7 @@ Title="iBasso DC07Pro UAC Control">
 					<fluent:FluentIcon Icon="Headphones" FontSize="22"/>
 					<StackPanel Spacing="2">
 						<TextBlock Text="iBasso DC07Pro" FontSize="18" FontWeight="SemiBold"/>
-						<TextBlock Text="{Binding SubTitle}" Opacity="0.75" FontSize="12"/>
+						<TextBlock Text="UAC Controller" Opacity="0.75" FontSize="12"/>
 					</StackPanel>
 				</StackPanel>
 

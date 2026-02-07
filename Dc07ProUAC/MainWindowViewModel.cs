@@ -32,21 +32,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private bool _suppress;
 
-    private bool _isConnected;
-    private bool _isDarkMode;
-    private bool _isAutoApply = true;
-    private int _volume = 60;
-    private bool _spdifEnabled;
-    private bool _hpFilterEnabled;
-    private string _selectedFilter = "FAST";
-    private GainMode _gain = GainMode.Low;
-    private int _balance;
-    private string _footerStatus = string.Empty;
-
     private bool _hasSelectedDevice;
-    private AudioDevicePickerDialog.DeviceRow _selectedDevice = default!;
 
-    private Func<Task<AudioDevicePickerDialog.DeviceRow>> _showDevicePickerAsync = DummyPicker;
     private bool _hasPicker;
 
     private readonly RelayCommand _volumeUpCommand;
@@ -56,14 +43,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly AsyncRelayCommand _applyCommand;
     private readonly AsyncRelayCommand _selectDeviceCommand;
 
-    public static string SubTitle => "UAC Controller";
-
     public bool IsConnected
     {
-        get => _isConnected;
+        get;
         private set
         {
-            if (!SetProperty(ref _isConnected, value)) return;
+            if (!SetProperty(ref field, value)) return;
             OnPropertyChanged(nameof(ConnectionText));
             OnPropertyChanged(nameof(ConnectionIcon));
             TouchStatus();
@@ -75,10 +60,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsDarkMode
     {
-        get => _isDarkMode;
+        get;
         set
         {
-            if (!SetProperty(ref _isDarkMode, value)) return;
+            if (!SetProperty(ref field, value)) return;
             if (!_suppress) ThemeChanged(this, value);
         }
     }
@@ -92,10 +77,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsAutoApply
     {
-        get => _isAutoApply;
+        get;
         set
         {
-            if (!SetProperty(ref _isAutoApply, value)) return;
+            if (!SetProperty(ref field, value)) return;
             TouchStatus();
             if (value) _ = ApplyNowAsync(throttle: false);
         }
@@ -103,11 +88,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public int Volume
     {
-        get => _volume;
+        get;
         set
         {
             var v = Clamp(value, 0, 100);
-            if (!SetProperty(ref _volume, v)) return;
+            if (!SetProperty(ref field, v)) return;
             OnPropertyChanged(nameof(VolumeDisplay));
             if (_suppress) return;
             _dirtyVolume = true;
@@ -119,10 +104,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public bool SpdifEnabled
     {
-        get => _spdifEnabled;
+        get;
         set
         {
-            if (!SetProperty(ref _spdifEnabled, value)) return;
+            if (!SetProperty(ref field, value)) return;
             if (_suppress) return;
             _dirtySbg = true;
             MarkDirtyAndMaybeApply();
@@ -131,10 +116,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HpFilterEnabled
     {
-        get => _hpFilterEnabled;
+        get;
         set
         {
-            if (!SetProperty(ref _hpFilterEnabled, value)) return;
+            if (!SetProperty(ref field, value)) return;
             if (_suppress) return;
             _dirtyFilters = true;
             MarkDirtyAndMaybeApply();
@@ -146,22 +131,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string SelectedFilter
     {
-        get => _selectedFilter;
+        get;
         set
         {
-            if (!SetProperty(ref _selectedFilter, value)) return;
+            if (!SetProperty(ref field, value)) return;
             if (_suppress) return;
             _dirtyFilters = true;
             MarkDirtyAndMaybeApply();
         }
-    }
+    } = "FAST";
 
     public GainMode Gain
     {
-        get => _gain;
+        get;
         set
         {
-            if (!SetProperty(ref _gain, value)) return;
+            if (!SetProperty(ref field, value)) return;
             OnPropertyChanged(nameof(IsGainLow));
             OnPropertyChanged(nameof(IsGainMid));
             OnPropertyChanged(nameof(IsGainHigh));
@@ -169,7 +154,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _dirtySbg = true;
             MarkDirtyAndMaybeApply();
         }
-    }
+    } = GainMode.Low;
 
     public bool IsGainLow
     {
@@ -191,11 +176,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public int Balance
     {
-        get => _balance;
+        get;
         set
         {
             var v = Clamp(value, -10, 10);
-            if (!SetProperty(ref _balance, v)) return;
+            if (!SetProperty(ref field, v)) return;
             OnPropertyChanged(nameof(BalanceDisplay));
             if (_suppress) return;
             _dirtySbg = true;
@@ -208,33 +193,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string FooterStatus
     {
-        get => _footerStatus;
-        private set => SetProperty(ref _footerStatus, value);
+        get;
+        private set => SetProperty(ref field, value);
     }
 
     public Func<Task<AudioDevicePickerDialog.DeviceRow>> ShowDevicePickerAsync
     {
-        get => _showDevicePickerAsync;
+        get;
         set
         {
             if (value is null)
             {
-                _showDevicePickerAsync = DummyPicker;
+                field = DummyPicker;
                 _hasPicker = false;
                 return;
             }
 
-            _showDevicePickerAsync = value;
+            field = value;
             _hasPicker = true;
         }
     }
 
     public AudioDevicePickerDialog.DeviceRow SelectedDevice
     {
-        get => _selectedDevice;
+        get;
         private set
         {
-            _selectedDevice = value;
+           field = value;
             _hasSelectedDevice = value is not null;
             RaiseCommandStates();
             TouchStatus();
