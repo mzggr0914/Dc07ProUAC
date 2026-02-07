@@ -140,7 +140,7 @@ public sealed class Dc07ProController : IDisposable
 
     public Task SetVolumeAsync(int v0To100)
     {
-        return (uint)v0To100 > 100 ? throw new ArgumentOutOfRangeException(nameof(v0To100)) 
+        return (uint)v0To100 > 100 ? throw new ArgumentOutOfRangeException(nameof(v0To100))
             : SendAsync(Dc07ProPackets.SetVolume((byte)v0To100));
     }
 

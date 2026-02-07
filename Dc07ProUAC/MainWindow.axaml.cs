@@ -38,7 +38,7 @@ namespace Dc07ProUAC
             _vm = DataContext as MainWindowViewModel;
 
             if (_vm is null) return;
-           
+
             _vm.ThemeChanged += VmOnThemeChanged;
             SyncVmFromSystemTheme();
 
@@ -56,7 +56,7 @@ namespace Dc07ProUAC
                 var v = isDark ? ThemeVariant.Dark : ThemeVariant.Light;
 
                 RequestedThemeVariant = v;
-                    Application.Current?.RequestedThemeVariant = v;
+                Application.Current?.RequestedThemeVariant = v;
             }, DispatcherPriority.Send);
         }
 

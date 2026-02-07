@@ -50,11 +50,6 @@
                          Text="{Binding VidPidText}"
                          Opacity="0.8"
                          VerticalAlignment="Center"/>
-
-              <Border Grid.Column="2" CornerRadius="999" BorderThickness="1" Padding="8,2"
-                      VerticalAlignment="Center">
-                <TextBlock Text="{Binding MatchText}" />
-              </Border>
             </Grid>
           </DataTemplate>
         </ListBox.ItemTemplate>

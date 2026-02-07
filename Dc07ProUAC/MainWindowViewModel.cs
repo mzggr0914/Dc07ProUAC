@@ -43,6 +43,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly AsyncRelayCommand _applyCommand;
     private readonly AsyncRelayCommand _selectDeviceCommand;
 
+    private readonly JsonSettingsStore _settingsStore = new();
+    private AppSettings _settings = new();
+
     public bool IsConnected
     {
         get;
@@ -219,7 +222,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         get;
         private set
         {
-           field = value;
+            field = value;
             _hasSelectedDevice = value is not null;
             RaiseCommandStates();
             TouchStatus();
@@ -241,7 +244,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         _refreshCommand = new AsyncRelayCommand(RefreshFromDeviceAsync, CanUseDeviceCommands);
         _applyCommand = new AsyncRelayCommand(() => ApplyNowAsync(throttle: false), CanUseDeviceCommands);
-        _selectDeviceCommand = new AsyncRelayCommand(PickDeviceAsync, AlwaysTrue);
+        _selectDeviceCommand = new AsyncRelayCommand(PickDeviceAsync, () => true);
 
         TouchStatus();
         _ = InitializeAsync();
@@ -260,8 +263,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (!_hasTransport) return;
         try { _transport.Dispose(); } catch { }
     }
-
-    private static bool AlwaysTrue() => true;
 
     private bool CanUseDeviceCommands() => _hasSelectedDevice;
 
@@ -284,12 +285,44 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         SelectedDevice = row;
 
+        try
+        {
+            _settings ??= new AppSettings();
+            _settings.LastDevice = HidDeviceService.ToSnapshot(row);
+            await _settingsStore.SaveAsync(_settings);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+
         var ok = await TryConnectAsync();
         if (ok) await RefreshFromDeviceAsync();
     }
 
     private async Task InitializeAsync()
     {
+        try { _settings = await _settingsStore.LoadAsync(); }
+        catch (Exception ex) { Debug.WriteLine(ex); _settings = new AppSettings(); }
+
+        if (!_hasSelectedDevice && _settings.LastDevice is not null)
+        {
+            try
+            {
+                var current = await HidDeviceService.ListRowsAsync();
+                var match = HidDeviceService.FindBestMatch(current, _settings.LastDevice);
+
+                if (match is not null)
+                {
+                    SelectedDevice = match;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+        }
+
         if (!_hasSelectedDevice)
         {
             IsConnected = false;
@@ -331,6 +364,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _hasTransport = true;
 
             _dc07 = new Dc07ProController(_transport);
+            await _dc07.InitializeAsync();
             _hasController = true;
 
             IsConnected = true;
@@ -549,10 +583,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         var spdif = SpdifEnabled ? "ON" : "OFF";
         var hp = HpFilterEnabled ? "ON" : "OFF";
         var applyMode = IsAutoApply ? "Auto" : "Manual";
-        var theme = IsDarkMode ? "Dark" : "Light";
         var state = applied ? "OK" : "…";
 
-        return $"[{state}] {note} • Vol {Volume}% • Bal {Balance} • Gain {g} • Filter {SelectedFilter} • SPDIF {spdif} • HP {hp} • {applyMode} • {theme}";
+        return $"[{state}] {note} • Vol {Volume}% • Bal {Balance} • Gain {g} • Filter {SelectedFilter} • SPDIF {spdif} • HP {hp} • {applyMode}";
     }
 
     private static int Clamp(int v, int min, int max) => v < min ? min : (v > max ? max : v);
