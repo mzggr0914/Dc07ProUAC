@@ -39,7 +39,6 @@ jobs:
         with:
           dotnet-version: "10.0.x"
           dotnet-quality: "ga"
-          cache: true
 
       - name: Restore
         run: dotnet restore "${{ env.PROJECT_PATH }}"
