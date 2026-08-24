@@ -1,4 +1,4 @@
-﻿namespace Dc07ProUAC;
+namespace Dc07ProUAC;
 
 public sealed class AppSettings
 {

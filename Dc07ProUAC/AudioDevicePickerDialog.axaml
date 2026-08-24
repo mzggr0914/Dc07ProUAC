@@ -18,7 +18,7 @@
               Command="{Binding RefreshCommand}" />
 
       <TextBox Grid.Row="1" Grid.ColumnSpan="2" Grid.Column="0"
-               Watermark="Ranking keyword (default: Dc07Pro). Examples: DC07 Pro, DC07, MOONDROP"
+               PlaceholderText="Ranking keyword (default: Dc07Pro). Examples: DC07 Pro, DC07, MOONDROP"
                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
     </Grid>
 
