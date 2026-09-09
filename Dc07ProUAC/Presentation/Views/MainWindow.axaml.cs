@@ -2,13 +2,17 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using static Dc07ProUAC.AudioDevicePickerDialog;
+using static Dc07ProUAC.Presentation.Views.Dialogs.AudioDevicePickerDialog;
 
-namespace Dc07ProUAC
+using Dc07ProUAC.Infrastructure.Hid;
+using Dc07ProUAC.Presentation.ViewModels;
+using Dc07ProUAC.Presentation.Views.Dialogs;
+
+namespace Dc07ProUAC.Presentation.Views
 {
     public partial class MainWindow : Window
     {
-        private MainWindowViewModel _vm;
+        private MainWindowViewModel? _vm;
 
         public MainWindow()
         {
@@ -45,11 +49,14 @@ namespace Dc07ProUAC
             _vm.ShowDevicePickerAsync = async () =>
             {
                 var dlg = new AudioDevicePickerDialog();
-                return await dlg.ShowDialog<DeviceRow>(this);
+                var row = await dlg.ShowDialog<DeviceRow?>(this);
+                return row is null
+                    ? null
+                    : new HidDeviceInfo(row.DevicePath, row.Vid, row.Pid, row.ProductName, row.Manufacturer, row.SerialNumber, row.MatchScore);
             };
         }
 
-        private void VmOnThemeChanged(object sender, bool isDark)
+        private void VmOnThemeChanged(object? sender, bool isDark)
         {
             Dispatcher.UIThread.Post(() =>
             {

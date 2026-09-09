@@ -10,7 +10,9 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-namespace Dc07ProUAC;
+using Dc07ProUAC.Infrastructure.Hid;
+
+namespace Dc07ProUAC.Presentation.Views.Dialogs;
 
 public partial class AudioDevicePickerDialog : Window
 {
@@ -25,13 +27,13 @@ public partial class AudioDevicePickerDialog : Window
         Opened += AudioDevicePickerDialog_Opened;
     }
 
-    private void AudioDevicePickerDialog_Opened(object sender, EventArgs e)
+    private void AudioDevicePickerDialog_Opened(object? sender, EventArgs e)
         => Vm.RefreshCommand.Execute(null);
 
-    private void Vm_RequestClose(object result)
+    private void Vm_RequestClose(object? result)
         => Close(result);
 
-    private ViewModel Vm => (ViewModel)DataContext;
+    private ViewModel Vm => DataContext as ViewModel ?? throw new InvalidOperationException("Dialog ViewModel is not initialized.");
 
     public sealed class DeviceRow(
         string devicePath,
@@ -73,7 +75,7 @@ public partial class AudioDevicePickerDialog : Window
 
     public sealed class ViewModel : INotifyPropertyChanged
     {
-        public event Action<object> RequestClose;
+        public event Action<object?>? RequestClose;
 
         public ObservableCollection<DeviceRow> Devices { get; } = [];
 
@@ -104,7 +106,7 @@ public partial class AudioDevicePickerDialog : Window
             Selected = null;
         }
 
-        public DeviceRow Selected
+        public DeviceRow? Selected
         {
             get;
             set
@@ -168,7 +170,7 @@ public partial class AudioDevicePickerDialog : Window
 
             try
             {
-                var query = (SearchText ?? "").Trim();
+                var query = SearchText.Trim();
 
                 if (!reScoreOnly)
                 {
@@ -260,12 +262,12 @@ public partial class AudioDevicePickerDialog : Window
         }
 
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        private void OnPropertyChanged([CallerMemberName] string name = null)
+        private void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        private bool SetField<T>(ref T field, T value, [CallerMemberName] string name = null)
+        private bool SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)
         {
             if (Equals(field, value)) return false;
             field = value;
@@ -274,26 +276,26 @@ public partial class AudioDevicePickerDialog : Window
         }
     }
 
-    private sealed class RelayCommand(Action execute, Func<bool> canExecute = null) : ICommand
+    private sealed class RelayCommand(Action execute, Func<bool>? canExecute = null) : ICommand
     {
-        public event EventHandler CanExecuteChanged;
+        public event EventHandler? CanExecuteChanged;
 
-        public bool CanExecute(object parameter) => canExecute?.Invoke() ?? true;
+        public bool CanExecute(object? parameter) => canExecute?.Invoke() ?? true;
 
-        public void Execute(object parameter) => execute();
+        public void Execute(object? parameter) => execute();
 
         public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private sealed class AsyncRelayCommand(Func<Task> execute, Func<bool> canExecute = null) : ICommand
+    private sealed class AsyncRelayCommand(Func<Task> execute, Func<bool>? canExecute = null) : ICommand
     {
         private bool _running;
 
-        public event EventHandler CanExecuteChanged;
+        public event EventHandler? CanExecuteChanged;
 
-        public bool CanExecute(object parameter) => !_running && (canExecute?.Invoke() ?? true);
+        public bool CanExecute(object? parameter) => !_running && (canExecute?.Invoke() ?? true);
 
-        public void Execute(object parameter) => Run().Forget();
+        public void Execute(object? parameter) => Run().Forget();
 
         private async Task Run()
         {
@@ -320,7 +322,7 @@ internal static class TaskExtensions
 {
     public static void Forget(this Task task)
     {
-        task?.ContinueWith(
+        task.ContinueWith(
             t => Debug.WriteLine(t.Exception),
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously
         );

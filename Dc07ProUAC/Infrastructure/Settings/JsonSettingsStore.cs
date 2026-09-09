@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Dc07ProUAC;
+namespace Dc07ProUAC.Infrastructure.Settings;
 
 public sealed class JsonSettingsStore
 {

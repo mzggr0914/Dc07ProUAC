@@ -7,21 +7,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-namespace Dc07ProUAC;
+using Dc07ProUAC.Core.Models;
+using Dc07ProUAC.Infrastructure.Hid;
+using Dc07ProUAC.Infrastructure.Settings;
+using Dc07ProUAC.Services;
+
+namespace Dc07ProUAC.Presentation.ViewModels;
 
 public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
-    public enum GainMode { Low, Mid, High }
-
-    public event PropertyChangedEventHandler PropertyChanged = delegate { };
+    public event PropertyChangedEventHandler? PropertyChanged;
     public event EventHandler<bool> ThemeChanged = delegate { };
 
-    private Dc07ProHidTransport _transport = null!;
-    private Dc07ProController _dc07 = null!;
-    private bool _hasTransport;
-    private bool _hasController;
-
-    private readonly SemaphoreSlim _ioLock = new(1, 1);
+    private readonly Dc07DeviceSession _session = new();
+    private readonly SynchronizationContext? _uiContext = SynchronizationContext.Current;
     private CancellationTokenSource _applyCts = new();
     private DateTime _lastApplyUtc = DateTime.MinValue;
 
@@ -33,8 +32,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _suppress;
 
     private bool _hasSelectedDevice;
-
-    private bool _hasPicker;
 
     private readonly RelayCommand _volumeUpCommand;
     private readonly RelayCommand _volumeDownCommand;
@@ -130,7 +127,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public ObservableCollection<string> Filters { get; } =
-        new(new[] { "SLOW", "FAST", "LL/F", "LL/S", "NOS" });
+        ["SLOW", "FAST", "LL/F", "LL/S", "NOS"];
 
     public string SelectedFilter
     {
@@ -198,26 +195,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         get;
         private set => SetProperty(ref field, value);
-    }
+    } = string.Empty;
 
-    public Func<Task<AudioDevicePickerDialog.DeviceRow>> ShowDevicePickerAsync
-    {
-        get;
-        set
-        {
-            if (value is null)
-            {
-                field = DummyPicker;
-                _hasPicker = false;
-                return;
-            }
-
-            field = value;
-            _hasPicker = true;
-        }
-    }
-
-    public AudioDevicePickerDialog.DeviceRow SelectedDevice
+    public Func<Task<HidDeviceInfo?>> ShowDevicePickerAsync { get; set; } = DummyPicker;
+    public HidDeviceInfo? SelectedDevice
     {
         get;
         private set
@@ -245,6 +226,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _refreshCommand = new AsyncRelayCommand(RefreshFromDeviceAsync, CanUseDeviceCommands);
         _applyCommand = new AsyncRelayCommand(() => ApplyNowAsync(throttle: false), CanUseDeviceCommands);
         _selectDeviceCommand = new AsyncRelayCommand(PickDeviceAsync, () => true);
+        _session.Disconnected += OnSessionDisconnected;
 
         TouchStatus();
         _ = InitializeAsync();
@@ -252,41 +234,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            _applyCts.Cancel();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
+        _session.Disconnected -= OnSessionDisconnected;
+
+        try { _applyCts.Cancel(); }
+        catch (Exception ex) { Debug.WriteLine(ex); }
         try { _applyCts.Dispose(); }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
-
-        try { _ioLock.Dispose(); }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
-
-        if (_hasController)
-            try { _dc07.Dispose(); }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex);
-            }
-
-        if (!_hasTransport) return;
-        try { _transport.Dispose(); }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
+        catch (Exception ex) { Debug.WriteLine(ex); }
+        try { _session.Dispose(); }
+        catch (Exception ex) { Debug.WriteLine(ex); }
     }
-
     private bool CanUseDeviceCommands() => _hasSelectedDevice;
 
     private void RaiseCommandStates()
@@ -301,8 +257,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task PickDeviceAsync()
     {
-        if (!_hasPicker) return;
-
         var row = await ShowDevicePickerAsync();
         if (row is null) return;
 
@@ -310,7 +264,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         try
         {
-            _settings ??= new AppSettings();
             _settings.LastDevice = HidDeviceService.ToSnapshot(row);
             await _settingsStore.SaveAsync(_settings);
         }
@@ -332,7 +285,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             try
             {
-                var current = await HidDeviceService.ListRowsAsync();
+                var current = await HidDeviceService.ListAsync();
                 var match = HidDeviceService.FindBestMatch(current, _settings.LastDevice);
 
                 if (match is not null)
@@ -359,37 +312,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task<bool> TryConnectAsync()
     {
-        if (!_hasSelectedDevice)
+        var device = SelectedDevice;
+        if (device is null)
         {
             IsConnected = false;
             FooterStatus = BuildStatusLine(applied: false, note: "Select a device");
             return false;
         }
 
-        await _ioLock.WaitAsync();
         try
         {
-            if (_hasController)
-            {
-                _dc07.Dispose();
-                _hasController = false;
-            }
-
-            if (_hasTransport)
-            {
-                _transport.Dispose();
-                _hasTransport = false;
-            }
-
-            var t = new Dc07ProHidTransport();
-            await t.OpenAsync(SelectedDevice.Vid, SelectedDevice.Pid);
-            _transport = t;
-            _hasTransport = true;
-
-            _dc07 = new Dc07ProController(_transport);
-            await _dc07.InitializeAsync();
-            _hasController = true;
-
+            await _session.ConnectAsync(device);
             IsConnected = true;
             FooterStatus = BuildStatusLine(applied: true, note: "Connected");
             return true;
@@ -402,11 +335,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
         finally
         {
-            _ioLock.Release();
             RaiseCommandStates();
         }
     }
-
     private async Task RefreshFromDeviceAsync()
     {
         if (!_hasSelectedDevice)
@@ -416,58 +347,46 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        if (!IsConnected || !_hasController)
+        if (!IsConnected || !_session.IsConnected)
         {
             var ok = await TryConnectAsync();
             if (!ok) return;
         }
 
-        await _ioLock.WaitAsync();
         try
         {
-            var vol = await _dc07.GetVolumeAsync();
-            var f = await _dc07.GetFiltersAsync();
-            var sbg = await _dc07.GetSpdifBalanceGainAsync();
-
+            var state = await _session.ReadStateAsync();
             _suppress = true;
 
-            Volume = Clamp(vol, 0, 100);
-
-            var uiFilterIndex = DeviceFilterToUiIndex(f.DigitalFilter);
-            uiFilterIndex = Clamp(uiFilterIndex, 0, Filters.Count - 1);
+            Volume = Clamp(state.Volume, 0, 100);
+            var uiFilterIndex = Clamp(DeviceFilterToUiIndex(state.DigitalFilter), 0, Filters.Count - 1);
             SelectedFilter = Filters[uiFilterIndex];
+            HpFilterEnabled = state.HpFilter != 0;
+            SpdifEnabled = state.SpdifMode != 0;
 
-            HpFilterEnabled = f.HpFilter != 0;
-            SpdifEnabled = sbg.SpdifMode != 0;
-
-            Gain = sbg.Gain switch
+            Gain = state.Gain switch
             {
                 0 => GainMode.Low,
                 1 => GainMode.Mid,
                 _ => GainMode.High
             };
-
-            Balance = Clamp(sbg.Balance - 10, -10, 10);
+            Balance = Clamp(state.Balance - 10, -10, 10);
 
             _dirtySbg = _dirtyFilters = _dirtyVolume = false;
             _dirtySinceLastApply = false;
-
-            _suppress = false;
-
             TouchStatus();
             FooterStatus = BuildStatusLine(applied: true, note: "Refreshed");
         }
         catch (Exception ex)
         {
+            IsConnected = _session.IsConnected;
             FooterStatus = $"{ex.GetType().Name}: {ex.Message}";
         }
         finally
         {
             _suppress = false;
-            _ioLock.Release();
         }
     }
-
     private void MarkDirtyAndMaybeApply()
     {
         _dirtySinceLastApply = true;
@@ -485,74 +404,48 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        if (!IsConnected || !_hasController)
+        if (!IsConnected || !_session.IsConnected)
         {
             var ok = await TryConnectAsync();
             if (!ok) return;
         }
 
-        if (throttle)
+        if (throttle && (DateTime.UtcNow - _lastApplyUtc).TotalMilliseconds < 120)
         {
-            var now = DateTime.UtcNow;
-            if ((now - _lastApplyUtc).TotalMilliseconds < 120)
-            {
-                ScheduleDelayedApply(160);
-                return;
-            }
+            ScheduleDelayedApply(160);
+            return;
         }
 
         _lastApplyUtc = DateTime.UtcNow;
 
-        await _ioLock.WaitAsync();
         try
         {
-            var spdif = SpdifEnabled ? 1 : 0;
-            var bal = Clamp(Balance + 10, 0, 20);
-            var gain = Gain switch
-            {
-                GainMode.Low => 0,
-                GainMode.Mid => 1,
-                _ => 2
-            };
+            var sections = Dc07SettingsSection.None;
+            if (_dirtySbg) sections |= Dc07SettingsSection.SpdifBalanceGain;
+            if (_dirtyFilters) sections |= Dc07SettingsSection.Filters;
+            if (_dirtyVolume) sections |= Dc07SettingsSection.Volume;
 
-            var uiFilterIndex = Clamp(Filters.IndexOf(SelectedFilter), 0, 4);
-            var deviceFilter = UiFilterToDeviceIndex(uiFilterIndex);
-            var hp = HpFilterEnabled ? 1 : 0;
+            var request = new Dc07ApplyRequest(
+                sections,
+                SpdifEnabled ? 1 : 0,
+                Clamp(Balance + 10, 0, 20),
+                Gain switch { GainMode.Low => 0, GainMode.Mid => 1, _ => 2 },
+                UiFilterToDeviceIndex(Clamp(Filters.IndexOf(SelectedFilter), 0, 4)),
+                HpFilterEnabled ? 1 : 0,
+                Clamp(Volume, 0, 100));
 
-            if (_dirtySbg)
-            {
-                await _dc07.SetSpdifBalanceGainAsync(spdif, bal, gain);
-                _dirtySbg = false;
-                await Task.Delay(12);
-            }
-
-            if (_dirtyFilters)
-            {
-                await _dc07.SetFiltersAsync(deviceFilter, hp);
-                _dirtyFilters = false;
-                await Task.Delay(12);
-            }
-
-            if (_dirtyVolume)
-            {
-                await _dc07.SetVolumeAsync(Clamp(Volume, 0, 100));
-                _dirtyVolume = false;
-            }
-
+            await _session.ApplyAsync(request);
+            _dirtySbg = _dirtyFilters = _dirtyVolume = false;
             _dirtySinceLastApply = false;
             FooterStatus = BuildStatusLine(applied: true, note: IsAutoApply ? "Auto applied" : "Applied");
         }
         catch (Exception ex)
         {
             Debug.WriteLine(ex);
+            IsConnected = _session.IsConnected;
             FooterStatus = $"{ex.GetType().Name}: {ex.Message}";
         }
-        finally
-        {
-            _ioLock.Release();
-        }
     }
-
     private void ScheduleDelayedApply(int delayMs)
     {
         try { _applyCts.Cancel(); }
@@ -633,7 +526,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void OnPropertyChanged(string name)
     {
         if (name.Length == 0) return;
-        PropertyChanged(this, new PropertyChangedEventArgs(name));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
     private static int UiFilterToDeviceIndex(int uiIndex) =>
@@ -652,35 +545,48 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _ => deviceIndex
         };
 
-    private static Task<AudioDevicePickerDialog.DeviceRow> DummyPicker() =>
-        Task.FromResult<AudioDevicePickerDialog.DeviceRow>(null!);
+    private static Task<HidDeviceInfo?> DummyPicker() => Task.FromResult<HidDeviceInfo?>(null);
 
+    private void OnSessionDisconnected(Exception? ex)
+    {
+        void Update()
+        {
+            IsConnected = false;
+            FooterStatus = ex is null
+                ? BuildStatusLine(applied: false, note: "Disconnected")
+                : $"{ex.GetType().Name}: {ex.Message}";
+            RaiseCommandStates();
+        }
+
+        if (_uiContext is null) Update();
+        else _uiContext.Post(_ => Update(), null);
+    }
     private sealed class RelayCommand(Action execute, Func<bool> canExecute) : ICommand
     {
-        public event EventHandler CanExecuteChanged = delegate { };
+        public event EventHandler? CanExecuteChanged;
 
-        public bool CanExecute(object parameter) => canExecute();
+        public bool CanExecute(object? parameter) => canExecute();
 
-        public void Execute(object parameter)
+        public void Execute(object? parameter)
         {
             if (!canExecute()) return;
             execute();
         }
 
-        public void RaiseCanExecuteChanged() => CanExecuteChanged(this, EventArgs.Empty);
+        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private sealed class AsyncRelayCommand(Func<Task> execute, Func<bool> canExecute) : ICommand
     {
         private bool _isRunning;
 
-        public event EventHandler CanExecuteChanged = delegate { };
+        public event EventHandler? CanExecuteChanged;
 
-        public bool CanExecute(object parameter) => !_isRunning && canExecute();
+        public bool CanExecute(object? parameter) => !_isRunning && canExecute();
 
-        public void Execute(object parameter) => _ = ExecuteAsync();
+        public void Execute(object? parameter) => _ = ExecuteAsync();
 
-        public void RaiseCanExecuteChanged() => CanExecuteChanged(this, EventArgs.Empty);
+        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 
         private async Task ExecuteAsync()
         {

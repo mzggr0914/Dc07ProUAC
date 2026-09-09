@@ -1,10 +1,10 @@
 <Window
 xmlns="https://github.com/avaloniaui"
 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-xmlns:vm="using:Dc07ProUAC"
+xmlns:vm="using:Dc07ProUAC.Presentation.ViewModels"
 xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
 x:DataType="vm:MainWindowViewModel"
-x:Class="Dc07ProUAC.MainWindow"
+x:Class="Dc07ProUAC.Presentation.Views.MainWindow"
 Width="900" Height="600"
 CanResize="False"
 Title="iBasso DC07Pro UAC Control">
@@ -38,6 +38,10 @@ Title="iBasso DC07Pro UAC Control">
 
 		<Style Selector="Button.step">
 			<Setter Property="MinWidth" Value="56"/>
+		</Style>
+
+		<Style Selector="Button.accent">
+			<Setter Property="FontWeight" Value="SemiBold"/>
 		</Style>
 	</Window.Styles>
 

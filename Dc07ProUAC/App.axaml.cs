@@ -3,6 +3,8 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 
+using Dc07ProUAC.Presentation.Views;
+
 namespace Dc07ProUAC
 {
     public class App : Application
